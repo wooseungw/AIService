@@ -1,9 +1,9 @@
 ##### 기본 정보 입력 #####
 import streamlit as st
 # audiorecorder 패키지 추가
-from AudioRecorder import audiorecorder
+from audiorecorder import audiorecorder
 # OpenAI 패키지 추가
-import openai
+from openai import OpenAI
 # 파일 삭제를 위한 패키지 추가
 import os
 # 시간 정보를 위한 패키지 추가
@@ -13,23 +13,25 @@ from gtts import gTTS
 # 음원 파일 재생을 위한 패키지 추가
 import base64
 
+from Key import Api_key
+
 ##### 기능 구현 함수 #####
-def STT(audio):
+def STT(client,audio):
     # 파일 저장
     filename='input.mp3'
     audio.export(filename, format="mp3")
     # 음원 파일 열기
     audio_file = open(filename, "rb")
     # Whisper 모델을 활용해 텍스트 얻기
-    transcript = openai.Audio.transcribe("whisper-1", audio_file)
+    transcript = client.audio.transcriptions.create(model="whisper-1",file = audio_file)
     audio_file.close()
     # 파일 삭제
     os.remove(filename)
-    return transcript["text"]
+    return transcript.text
 
-def ask_gpt(prompt, model):
-    response = openai.ChatCompletion.create(model=model, messages=prompt)
-    system_message = response["choices"][0]["message"]
+def ask_gpt(client, prompt, model):
+    response = client.chat.completions.create(model=model, messages=prompt)
+    system_message = response.choices[0].message
     return system_message["content"]
 
 def TTS(response):
@@ -74,7 +76,7 @@ def main():
     st.markdown("---")
 
     # 기본 설명
-    with st.expander("음성비서 프로그램에 관하여", expanded=True):
+    with st.expander("음성비서 프로그램에 관하여", expanded=False):
         st.write(
         """     
         - 음성비서 프로그램의 UI는 스트림릿을 활용했습니다.
@@ -88,14 +90,14 @@ def main():
 
     # 사이드바 생성
     with st.sidebar:
-
+        client = OpenAI(api_key = st.text_input(label="OPENAI API 키", placeholder="Enter Your API Key", value="", type="password"))
         # Open AI API 키 입력받기
-        openai.api_key = st.text_input(label="OPENAI API 키", placeholder="Enter Your API Key", value="", type="password")
+        
 
         st.markdown("---")
 
         # GPT 모델을 선택하기 위한 라디오 버튼 생성
-        model = st.radio(label="GPT 모델",options=["gpt-4", "gpt-3.5-turbo"])
+        model = st.radio(label="GPT 모델",options=["gpt-3.5-turbo","gpt-4"])
 
         st.markdown("---")
 
@@ -117,20 +119,21 @@ def main():
             # 음성 재생 
             st.audio(audio.export().read())
             # 음원 파일에서 텍스트 추출
-            question = STT(audio)
+            question = STT(client, audio)
 
             # 채팅을 시각화하기 위해 질문 내용 저장
             now = datetime.now().strftime("%H:%M")
             st.session_state["chat"] = st.session_state["chat"]+ [("user",now, question)]
             # GPT 모델에 넣을 프롬프트를 위해 질문 내용 저장
             st.session_state["messages"] = st.session_state["messages"]+ [{"role": "user", "content": question}]
+            st.write(st.session_state["messages"])
 
     with col2:
         # 오른쪽 영역 작성
         st.subheader("질문/답변")
         if  (audio.duration_seconds > 0)  and (st.session_state["check_reset"]==False):
             # ChatGPT에게 답변 얻기
-            response = ask_gpt(st.session_state["messages"], model)
+            response = ask_gpt(client,st.session_state["messages"], model)
 
             # GPT 모델에 넣을 프롬프트를 위해 답변 내용 저장
             st.session_state["messages"] = st.session_state["messages"]+ [{"role": "system", "content": response}]
