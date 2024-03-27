@@ -7,9 +7,12 @@ from datetime import datetime
 from gtts import gTTS
 import base64
 
-from Key import Api_key
+st.set_page_config(
+    page_title="음성 비서 프로그램",
+    layout="wide")
 
-# 2. TTS실습예제
+
+### 2. TTS실습예제 ###
 def TTS(response):
     # gTTS 를 활용하여 음성 파일 생성
     filename = "output.mp3"
@@ -28,7 +31,7 @@ def TTS(response):
     
     os.remove(filename)
 
-# 3. Whisper API
+### 7. STT 함수 구현 ###
 def STT(client,audio):
     # 파일 저장
     filename='input.mp3'
@@ -41,21 +44,13 @@ def STT(client,audio):
     # 파일 삭제
     os.remove(filename)
     return transcript.text
-
+###8. ask_gpt ###
 def ask_gpt(client, prompt, model):
     response = client.chat.completions.create(model=model, messages=prompt)
     system_message = response.choices[0].message
     return system_message.content
 
-
-
-
-# 기본 설정
-st.set_page_config(
-    page_title="음성 비서 프로그램",
-    layout="wide")
-
-# session state 초기화
+###5. Session State 구현 ###
 if "chat" not in st.session_state:
     st.session_state["chat"] = []
 
@@ -65,11 +60,9 @@ if "messages" not in st.session_state:
 if "check_reset" not in st.session_state:
     st.session_state["check_reset"] = False
 
-# 제목 
+### 4. 음성비서 프로그램 UI ###
 st.header("음성 비서 프로그램")
 
-
-# 기본 설명
 with st.expander("음성비서 프로그램에 관하여", expanded=False):
     st.write(
     """     
@@ -79,22 +72,15 @@ with st.expander("음성비서 프로그램에 관하여", expanded=False):
     - TTS(Text-To-Speech)는 구글의 Google Translate TTS를 활용했습니다.
     """
     )
-
     st.markdown("")
 
 # 사이드바 생성
 with st.sidebar:
     client = OpenAI(api_key = st.text_input(label="OPENAI API 키", placeholder="Enter Your API Key", value="", type="password"))
-    # Open AI API 키 입력받기
-    
-
     st.markdown("---")
-
     # GPT 모델을 선택하기 위한 라디오 버튼 생성
     model = st.radio(label="GPT 모델",options=["gpt-3.5-turbo","gpt-4"])
-
     st.markdown("---")
-
     # 리셋 버튼 생성
     if st.button(label="초기화"):
         # 리셋 코드 
@@ -105,7 +91,7 @@ with st.sidebar:
 # 기능 구현 공간
 col1, col2 =  st.columns(2)
 with col1:
-    # 왼쪽 영역 작성
+    ###6. 음성 녹음 ###
     st.subheader("질문하기")
     # 음성 녹음 아이콘 추가
     audio = audiorecorder("클릭하여 녹음하기", "녹음중...")
@@ -120,7 +106,7 @@ with col1:
         st.session_state["chat"] = st.session_state["chat"]+ [("user",now, question)]
         # GPT 모델에 넣을 프롬프트를 위해 질문 내용 저장
         st.session_state["messages"] = st.session_state["messages"]+ [{"role": "user", "content": question}]
-        st.write(st.session_state["messages"])
+        #st.write(st.session_state["messages"])
 
 with col2:
     # 오른쪽 영역 작성
@@ -139,10 +125,12 @@ with col2:
         # 채팅 형식으로 시각화 하기
         for sender, time, message in st.session_state["chat"]:
             if sender == "user":
-                st.write(f'<div style="display:flex;align-items:center;"><div style="background-color:#007AFF;color:white;border-radius:12px;padding:8px 12px;margin-right:8px;">{message}</div><div style="font-size:0.8rem;color:gray;">{time}</div></div>', unsafe_allow_html=True)
+                st.write(f'<div style="font-size:0.8rem;color:gray;">{time}</div>',unsafe_allow_html=True)
+                st.write(f'<div style="display:flex;align-items:center;"><div style="background-color:#007AFF;color:white;border-radius:12px;padding:8px 12px;margin-right:8px;">{message}</div></div>', unsafe_allow_html=True)
                 st.write("")
             else:
-                st.write(f'<div style="display:flex;align-items:center;justify-content:flex-end;"><div style="background-color:lightgray;border-radius:12px;padding:8px 12px;margin-left:8px;">{message}</div><div style="font-size:0.8rem;color:gray;">{time}</div></div>', unsafe_allow_html=True)
+                st.write(f'<div style="font-size:0.8rem;color:gray;">{time}</div>',unsafe_allow_html=True)
+                st.write(f'<div style="display:flex;align-items:center;justify-content:flex-end;"><div style="background-color:gray;border-radius:12px;padding:8px 12px;margin-left:8px;">{message}</div></div>', unsafe_allow_html=True)
                 st.write("")
         
         # gTTS 를 활용하여 음성 파일 생성 및 재생
@@ -150,3 +138,7 @@ with col2:
     else:
         st.session_state["check_reset"] = False
 
+
+
+
+ 
